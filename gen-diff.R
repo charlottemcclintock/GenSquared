@@ -37,6 +37,11 @@ p <- subplot(p1, p2)
 p
 
 
+library(httr)
+
+urlfile <- 'https://raw.githubusercontent.com/charlottemcclintock/GenSquared/master/data.csv'
+df <- read.csv(urlfile)
+
 p <- plot_ly(df, color = I("gray80")) %>%
   add_segments(x = ~mom, xend = ~daughter, y = ~country, yend = ~country, showlegend = FALSE) %>%
   add_markers(x = ~mom, y = ~country, name = "Mother", color = I("purple")) %>%
