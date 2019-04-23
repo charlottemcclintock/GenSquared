@@ -5,9 +5,6 @@
 # ..................................................................................................
 
 # set up: wd, retrieve data
-rm(list=ls())
-getwd()
-
 
 library(knitr)
 library(tidyverse)
@@ -58,21 +55,22 @@ ui <- shinyUI(fluidPage(theme = "bootstrap.css",
             tags$p("How do educational attainment gaps between parents influence educational attainment by sons or daughters?"),
             tags$p("Select a continent, pick some countries, then select a year, or click play to see the animation:"),
             htmlOutput("geo_selector"),
-            htmlOutput("country_selector"),
             htmlOutput("sort_selector"),
+            htmlOutput("country_selector"),
             htmlOutput("year_selector"),
             width=4
             
         ),
 
-        # Show a plot of the generated distribution
         mainPanel(
            plotlyOutput("distPlot")
         )
     )
 ))
 
-# Define server logic required to draw a histogram
+# ..................................................................................................
+
+# server
 server <- function(input, output) {
     
     output$year_selector <- renderUI({
@@ -85,6 +83,8 @@ server <- function(input, output) {
                     ) 
     })
     
+# ..................................................................................................
+    
     
     output$geo_selector <- renderUI({
         selectInput(
@@ -95,20 +95,55 @@ server <- function(input, output) {
             multiple = F)
     })
     
+    output$sort_selector <- renderUI({
+        selectInput(
+            inputId = "sort", 
+            label = "Sort:",
+            choices = c("Average Child Education Difference", 
+                        "Parental Gender Gap", 
+                        "Child Gender Gap", "None"),
+            selected = "None",
+            multiple = F)
+    })
     
     data <- reactive({
-        if (input$geo=="All") {
-            data <- df %>% 
-                mutate(cnum=as.numeric(as.factor(country)), 
+        if (input$geo=="All"&is.null(input$sort)) {
+            data <- df %>%
+                mutate(cnum=as.numeric(as.factor(country)),
                        arb=max(daughter)+2)
         }
-        else {
-            data <- df %>% 
-                         subset(continent==input$geo) %>% 
-                         mutate(cnum=as.numeric(as.factor(country)), 
-                          arb=max(daughter)+2)
+        else if (input$sort=="Average Child Education Difference") {
+            data <- df %>%
+                subset(continent==input$geo) %>%
+                mutate(country=factor(country, levels=unique(country[order(avgchange, country)])),
+                       cnum=as.numeric(as.factor(country)),
+                       arb=max(daughter)+2)
+        } 
+        else if (input$sort=="Child Gender Gap") {
+            data <- df %>%
+                subset(continent==input$geo) %>%
+                mutate(country=factor(country, levels=unique(country[order(kidgap, country)])),
+                       cnum=as.numeric(as.factor(country)),
+                       arb=max(daughter)+2)
+        }
+        else if (input$sort=="Parental Gender Gap") {
+            data <- df %>%
+                subset(continent==input$geo) %>%
+                mutate(country=factor(country, levels=unique(country[order(pargap, country)])),
+                       cnum=as.numeric(as.factor(country)),
+                       arb=max(daughter)+2)
+        }
+        else if (input$sort=="None"){
+            data <- df %>%
+                subset(continent==input$geo) %>%
+                mutate(country=factor(country), 
+                              cnum=as.numeric(as.factor(country)),
+                               arb=max(daughter)+2)
         }
     })
+    
+# ..................................................................................................
+    
     
     output$country_selector <- renderUI({
         selectInput(
@@ -119,23 +154,16 @@ server <- function(input, output) {
             multiple = T)
     })
     
-    output$sort_selector <- renderUI({
-        selectInput(
-            inputId = "sort", 
-            label = "Sort:",
-            choices = c("Average Child Education Difference", 
-                        "Parental Gender Gap", 
-                        "Child Gender Gap"),
-            selected = NULL,
-            multiple = T)
-    })
+
     
     final <- reactive({
         filter(as.data.frame(data()), country %in% c(input$country)) %>% 
-            filter(year==input$time)
+            filter(year==input$time) %>% 
+            mutate(country=droplevels(country))
     })
 
-
+# ..................................................................................................
+    
     output$distPlot <- renderPlotly({
         plot_ly(data=as.data.frame(final()), color = I("gray80"), width = 800, 
                 height = 250+40*nrow(as.data.frame(final()))) %>%
@@ -160,8 +188,8 @@ server <- function(input, output) {
 shinyApp(ui = ui, server = server)
 
 
-# add x axis to the top
-# select all option for continent?
-# options to show biggest gains for girls or boys? biggest gaps?
-## sort parent gap, sort child gap, sort mean child
+# To Do:
 # 10 random countries for ALL continents? 10 top/10 bottom
+# tool tip?
+
+
