@@ -1,4 +1,8 @@
 
+# Charlotte McClintock
+# Intergenerational Mobolity by Gender
+
+# ..................................................................................................
 
 # set up: wd, retrieve data
 rm(list=ls())
@@ -18,26 +22,31 @@ library(shinyWidgets)
 
 # ..................................................................................................
 
+# cleaning
 df <- read_csv("gen.csv")
 df <- subset(df, !is.na(mom)|!is.na(daughter))
 df <- arrange(df, year)
+# create useful variables for sortin
 df <- mutate(df, 
              avgchange = (daughter+son)/2 - (dad+mom)/2, 
              pargap=dad-mom, 
              kidgap=son-daughter)
+# drop observations with missing values
 df <- subset(df, !is.na(avgchange))
 
 
 # ..................................................................................................
 
+# ui
 ui <- shinyUI(fluidPage(theme = "bootstrap.css",
+    # recolor sidebar panel & turn off menu bar
     tags$head(tags$style(
         HTML('
          #sidebar {
-            background-color: #ffffff;
+            background-color: #ffffff; 
         }
              .modebar {
-                display: none !important;
+                display: none !important; 
             }')
     )),
     tags$br(),
@@ -86,17 +95,6 @@ server <- function(input, output) {
             multiple = F)
     })
     
-    output$sort_selector <- renderUI({
-        selectInput(
-            inputId = "sort", 
-            label = "Sort:",
-            choices = c("Average Child Education Difference", 
-                        "Parental Gender Gap", 
-                        "Child Gender Gap"),
-            selected = NULL,
-            multiple = T)
-    })
-    
     
     data <- reactive({
         if (input$geo=="All") {
@@ -105,10 +103,10 @@ server <- function(input, output) {
                        arb=max(daughter)+2)
         }
         else {
-        data <- df %>% 
-            filter(continent==input$geo) %>% 
-            mutate(cnum=as.numeric(as.factor(country)), 
-                   arb=max(daughter)+2)
+            data <- df %>% 
+                         subset(continent==input$geo) %>% 
+                         mutate(cnum=as.numeric(as.factor(country)), 
+                          arb=max(daughter)+2)
         }
     })
     
@@ -121,11 +119,20 @@ server <- function(input, output) {
             multiple = T)
     })
     
+    output$sort_selector <- renderUI({
+        selectInput(
+            inputId = "sort", 
+            label = "Sort:",
+            choices = c("Average Child Education Difference", 
+                        "Parental Gender Gap", 
+                        "Child Gender Gap"),
+            selected = NULL,
+            multiple = T)
+    })
     
     final <- reactive({
         filter(as.data.frame(data()), country %in% c(input$country)) %>% 
             filter(year==input$time)
-        
     })
 
 
