@@ -36,7 +36,7 @@ ui <- fluidPage(theme = "bootstrap.css",
     tags$h2("Mothers, Daughters, Fathers, Sons"),
     tags$h4("Intergenerational mobility as measured through educational attainment by gender"),
     # Sidebar with a slider input for number of bins 
-    sidebarLayout(
+    sidebarLayout(position="left",
         sidebarPanel(
             id="sidebar",
             tags$p("How do educational attainment gaps between parents influence educational attainment by sons or daughters?"),
@@ -44,7 +44,7 @@ ui <- fluidPage(theme = "bootstrap.css",
             htmlOutput("geo_selector"),
             htmlOutput("country_selector"),
             htmlOutput("year_selector"),
-            width=3
+            width=4
             
         ),
 
@@ -62,7 +62,7 @@ server <- function(input, output) {
         sliderTextInput(inputId = "time", 
                     label = "",
                     choices = unique(df$year),
-                    selected = 1940,
+                    selected = 1980,
                     animate=T,
                     grid=T
                     ) 
@@ -81,7 +81,6 @@ server <- function(input, output) {
     
     data <- reactive({
         data <- df %>% 
-            filter(year==input$time) %>%
             filter(continent==input$geo) %>% 
             mutate(cnum=as.numeric(as.factor(country)), 
                    arb=max(daughter)+2)
@@ -92,13 +91,18 @@ server <- function(input, output) {
             inputId = "country", 
             label = "Countries:",
             choices = as.character(unique(data()$country)), 
-            selected = as.character(unique(data()$country)), 
+            selected = as.character(unique(data()$country)),
             multiple = T)
+    })
+    
+    final <- reactive({
+        filter(as.data.frame(data()), country %in% c(input$country)) %>% 
+            filter(year==input$time)
     })
 
 
     output$distPlot <- renderPlotly({
-        plot_ly(data=as.data.frame(data()), color = I("gray80"), width = 800, height = 40*nrow(as.data.frame(data()))) %>%
+        plot_ly(data=as.data.frame(final()), color = I("gray80"), width = 900, height = 40*nrow(as.data.frame(final()))) %>%
             add_segments(x = ~mom, xend = ~daughter, y = ~cnum+.2, yend = ~cnum+.2, showlegend = FALSE) %>%
             add_markers(x = ~mom, y = ~cnum+.2, name = "Mother", color = I("purple"), size=2) %>%
             add_markers(x = ~daughter, y = ~cnum+.2, name = "Daughter", color = I("pink"), size=2) %>%
@@ -121,5 +125,6 @@ shinyApp(ui = ui, server = server)
 
 
 # add x axis to the top
+# select all option for continent?
 
 
