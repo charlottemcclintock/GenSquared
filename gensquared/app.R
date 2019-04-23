@@ -21,8 +21,15 @@ library(shinyWidgets)
 df <- read_csv("gen.csv")
 df <- subset(df, !is.na(mom)|!is.na(daughter))
 df <- arrange(df, year)
+df <- mutate(df, 
+             avgchange = (daughter+son)/2 - (dad+mom)/2, 
+             pargap=dad-mom, 
+             kidgap=son-daughter)
+df <- subset(df, !is.na(avgchange))
 
-# Define UI for application that draws a histogram
+
+# ..................................................................................................
+
 ui <- shinyUI(fluidPage(theme = "bootstrap.css",
     tags$head(tags$style(
         HTML('
@@ -33,16 +40,17 @@ ui <- shinyUI(fluidPage(theme = "bootstrap.css",
                 display: none !important;
             }')
     )),
-    tags$h2("Mothers, Daughters, Fathers, Sons"),
-    tags$h4("Intergenerational mobility as measured through educational attainment by gender"),
     tags$br(),
     sidebarLayout(position="left",
         sidebarPanel(
             id="sidebar",
+            tags$h2("Mothers, Daughters, Fathers, Sons"),
+            tags$h4("Intergenerational mobility as measured through educational attainment by gender of parent and child"),
             tags$p("How do educational attainment gaps between parents influence educational attainment by sons or daughters?"),
             tags$p("Select a continent, pick some countries, then select a year, or click play to see the animation:"),
             htmlOutput("geo_selector"),
             htmlOutput("country_selector"),
+            htmlOutput("sort_selector"),
             htmlOutput("year_selector"),
             width=4
             
@@ -73,17 +81,35 @@ server <- function(input, output) {
         selectInput(
             inputId = "geo", 
             label = "Continent:",
-            choices = as.character(unique(df$continent)), 
-            selected = "A", 
+            choices = c(as.character(unique(df$continent)), "All"), 
+            selected = "Americas", 
             multiple = F)
+    })
+    
+    output$sort_selector <- renderUI({
+        selectInput(
+            inputId = "sort", 
+            label = "Sort:",
+            choices = c("Average Child Education Difference", 
+                        "Parental Gender Gap", 
+                        "Child Gender Gap"),
+            selected = NULL,
+            multiple = T)
     })
     
     
     data <- reactive({
+        if (input$geo=="All") {
+            data <- df %>% 
+                mutate(cnum=as.numeric(as.factor(country)), 
+                       arb=max(daughter)+2)
+        }
+        else {
         data <- df %>% 
             filter(continent==input$geo) %>% 
             mutate(cnum=as.numeric(as.factor(country)), 
                    arb=max(daughter)+2)
+        }
     })
     
     output$country_selector <- renderUI({
@@ -95,14 +121,17 @@ server <- function(input, output) {
             multiple = T)
     })
     
+    
     final <- reactive({
         filter(as.data.frame(data()), country %in% c(input$country)) %>% 
             filter(year==input$time)
+        
     })
 
 
     output$distPlot <- renderPlotly({
-        plot_ly(data=as.data.frame(final()), color = I("gray80"), width = 900, height = 40*nrow(as.data.frame(final()))) %>%
+        plot_ly(data=as.data.frame(final()), color = I("gray80"), width = 800, 
+                height = 250+40*nrow(as.data.frame(final()))) %>%
             add_segments(x = ~mom, xend = ~daughter, y = ~cnum+.2, yend = ~cnum+.2, showlegend = FALSE) %>%
             add_markers(x = ~mom, y = ~cnum+.2, name = "Mother", color = I("purple"), size=2) %>%
             add_markers(x = ~daughter, y = ~cnum+.2, name = "Daughter", color = I("pink"), size=2) %>%
@@ -111,11 +140,11 @@ server <- function(input, output) {
             add_markers(x = ~son, y = ~cnum-.1, name = "Son", color = I("blue"), size=2) %>%
             add_markers(x = ~arb, y = ~country, name = " ", color = I("white"), yaxis = "y2") %>%
             layout(
-                xaxis = list(title = "Mean Years of Education", tick0=0),
+                xaxis = list(title = "Mean Years of Education", range = c(.1, 17), side='top'),
                 margin = list(l = 150),
                 yaxis=list(title="", tickfont=list(color="white")),
                 yaxis2 = list(overlaying = "y", side = "left", title = ""),
-                legend = list(orientation = 'h', y=10)
+                legend = list(orientation = 'h', x = 0.2, y = 1)
             ) 
     })
 }
@@ -127,5 +156,5 @@ shinyApp(ui = ui, server = server)
 # add x axis to the top
 # select all option for continent?
 # options to show biggest gains for girls or boys? biggest gaps?
-
-
+## sort parent gap, sort child gap, sort mean child
+# 10 random countries for ALL continents? 10 top/10 bottom
