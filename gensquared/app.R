@@ -23,7 +23,7 @@ df <- subset(df, !is.na(mom)|!is.na(daughter))
 df <- arrange(df, year)
 
 # Define UI for application that draws a histogram
-ui <- fluidPage(theme = "bootstrap.css",
+ui <- shinyUI(fluidPage(theme = "bootstrap.css",
     tags$head(tags$style(
         HTML('
          #sidebar {
@@ -35,12 +35,12 @@ ui <- fluidPage(theme = "bootstrap.css",
     )),
     tags$h2("Mothers, Daughters, Fathers, Sons"),
     tags$h4("Intergenerational mobility as measured through educational attainment by gender"),
-    # Sidebar with a slider input for number of bins 
+    tags$br(),
     sidebarLayout(position="left",
         sidebarPanel(
             id="sidebar",
             tags$p("How do educational attainment gaps between parents influence educational attainment by sons or daughters?"),
-            tags$p("Select a continent, then select a year, or click play to see the animation:"),
+            tags$p("Select a continent, pick some countries, then select a year, or click play to see the animation:"),
             htmlOutput("geo_selector"),
             htmlOutput("country_selector"),
             htmlOutput("year_selector"),
@@ -53,7 +53,7 @@ ui <- fluidPage(theme = "bootstrap.css",
            plotlyOutput("distPlot")
         )
     )
-)
+))
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
@@ -126,5 +126,6 @@ shinyApp(ui = ui, server = server)
 
 # add x axis to the top
 # select all option for continent?
+# options to show biggest gains for girls or boys? biggest gaps?
 
 
