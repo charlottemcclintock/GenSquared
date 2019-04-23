@@ -1,0 +1,12 @@
+name: gensquared
+title: gensquared
+username:
+account: charlottemcclintock
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 883779
+bundleId: 2033270
+url: https://charlottemcclintock.shinyapps.io/gensquared/
+when: 1556040128.70424
+asMultiple: FALSE
+asStatic: FALSE
