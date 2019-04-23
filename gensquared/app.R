@@ -13,23 +13,38 @@ library(DT)
 library(shinythemes)
 library(markdown)
 library(rsconnect)
+library(shinyWidgets)
+
 
 # ..................................................................................................
 
 df <- read_csv("gen.csv")
 df <- subset(df, !is.na(mom)|!is.na(daughter))
-
-df$year <- as.character(df$year)
+df <- arrange(df, year)
 
 # Define UI for application that draws a histogram
-ui <- fluidPage(
-
+ui <- fluidPage(theme = "bootstrap.css",
+    tags$head(tags$style(
+        HTML('
+         #sidebar {
+            background-color: #ffffff;
+        }
+             .modebar {
+                display: none !important;
+            }')
+    )),
+    tags$h2("Mothers, Daughters, Fathers, Sons"),
+    tags$h4("Intergenerational mobility as measured through educational attainment by gender"),
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(
-            htmlOutput("year_selector"),
+            id="sidebar",
+            tags$p("How do educational attainment gaps between parents influence educational attainment by sons or daughters?"),
+            tags$p("Select a continent, then select a year, or click play to see the animation:"),
             htmlOutput("geo_selector"),
-            width=2
+            htmlOutput("country_selector"),
+            htmlOutput("year_selector"),
+            width=3
             
         ),
 
@@ -44,45 +59,67 @@ ui <- fluidPage(
 server <- function(input, output) {
     
     output$year_selector <- renderUI({
-        selectInput(
-            inputId = "time",
-            label = "Year:",
-            choices = as.character(unique(df$year)),
-            selected = "1980")
+        sliderTextInput(inputId = "time", 
+                    label = "",
+                    choices = unique(df$year),
+                    selected = 1940,
+                    animate=T,
+                    grid=T
+                    ) 
     })
+    
     
     output$geo_selector <- renderUI({
         selectInput(
             inputId = "geo", 
             label = "Continent:",
             choices = as.character(unique(df$continent)), 
-            selected = "Americas", 
+            selected = "A", 
             multiple = F)
     })
     
+    
     data <- reactive({
-                df %>% 
+        data <- df %>% 
             filter(year==input$time) %>%
-            filter(continent==input$geo)
+            filter(continent==input$geo) %>% 
+            mutate(cnum=as.numeric(as.factor(country)), 
+                   arb=max(daughter)+2)
+    })
+    
+    output$country_selector <- renderUI({
+        selectInput(
+            inputId = "country", 
+            label = "Countries:",
+            choices = as.character(unique(data()$country)), 
+            selected = as.character(unique(data()$country)), 
+            multiple = T)
     })
 
+
     output$distPlot <- renderPlotly({
-        plot_ly(data=as.data.frame(data()), color = I("gray80")) %>%
-            add_segments(x = ~mom, xend = ~daughter, y = ~country, yend = ~country, showlegend = FALSE) %>%
-            add_markers(x = ~mom, y = ~country, name = "Mother", color = I("purple")) %>%
-            add_markers(x = ~daughter, y = ~country, name = "Daughter", color = I("pink")) %>%
-            add_segments(x = ~dad, xend = ~son, y = ~country, yend = ~country, showlegend = FALSE, yaxis = "y2") %>%
-            add_markers(x = ~dad, y = ~country, name = "Father", color = I("navy"), yaxis = "y2") %>%
-            add_markers(x = ~son, y = ~country, name = "Son", color = I("blue"), yaxis = "y2") %>%
+        plot_ly(data=as.data.frame(data()), color = I("gray80"), width = 800, height = 40*nrow(as.data.frame(data()))) %>%
+            add_segments(x = ~mom, xend = ~daughter, y = ~cnum+.2, yend = ~cnum+.2, showlegend = FALSE) %>%
+            add_markers(x = ~mom, y = ~cnum+.2, name = "Mother", color = I("purple"), size=2) %>%
+            add_markers(x = ~daughter, y = ~cnum+.2, name = "Daughter", color = I("pink"), size=2) %>%
+            add_segments(x = ~dad, xend = ~son, y = ~cnum-.1, yend = ~cnum-.1, showlegend = FALSE) %>%
+            add_markers(x = ~dad, y = ~cnum-.1, name = "Father", color = I("navy"), size=2) %>%
+            add_markers(x = ~son, y = ~cnum-.1, name = "Son", color = I("blue"), size=2) %>%
+            add_markers(x = ~arb, y = ~country, name = " ", color = I("white"), yaxis = "y2") %>%
             layout(
-                autosize = F, width = 800, height = 20*nrow(as.data.frame(data())),
-                xaxis = list(title = "Mean Years of Education"),
+                xaxis = list(title = "Mean Years of Education", tick0=0),
                 margin = list(l = 150),
                 yaxis=list(title="", tickfont=list(color="white")),
-                yaxis2 = list(overlaying = "y", side = "left", title = "")
+                yaxis2 = list(overlaying = "y", side = "left", title = ""),
+                legend = list(orientation = 'h', y=10)
             ) 
     })
 }
 
 # Run the application 
 shinyApp(ui = ui, server = server)
+
+
+# add x axis to the top
+
+
